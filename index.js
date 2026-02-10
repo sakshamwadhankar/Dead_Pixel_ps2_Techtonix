@@ -7,7 +7,7 @@ require('dotenv').config();
 const app = express();
 
 
-// Authorization middleware
+// Authorization middleware — now enforces is_verified for voters
 const authorizeUser = (req, res, next) => {
   const token = req.query.Authorization?.split('Bearer ')[1];
 
@@ -18,6 +18,16 @@ const authorizeUser = (req, res, next) => {
   try {
     // Verify and decode the token
     const decodedToken = jwt.verify(token, process.env.SECRET_KEY, { algorithms: ['HS256'] });
+
+    // Block voters who haven't completed OTP verification
+    if (decodedToken.role !== 'admin' && !decodedToken.is_verified) {
+      return res.status(403).send('<h1 align="center"> OTP verification required </h1>');
+    }
+
+    // Block pending_otp tokens from accessing protected pages
+    if (decodedToken.step === 'pending_otp') {
+      return res.status(403).send('<h1 align="center"> Complete OTP verification first </h1>');
+    }
 
     req.user = decodedToken;
     next(); // Proceed to the next middleware
