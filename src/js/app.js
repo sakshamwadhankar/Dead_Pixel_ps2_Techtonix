@@ -8,7 +8,25 @@ var VotingContract = contract(votingArtifacts)
 
 
 window.App = {
-  eventStart: function() { 
+  candidateMeta: {},  // Cache for MongoDB candidate metadata (bio, image)
+
+  // Fetch candidate metadata from the FastAPI /candidates endpoint
+  fetchCandidateMetadata: async function() {
+    try {
+      const response = await fetch('http://127.0.0.1:8000/candidates');
+      if (response.ok) {
+        const data = await response.json();
+        data.candidates.forEach(function(c) {
+          App.candidateMeta[c.id] = c;
+        });
+        console.log("Candidate metadata loaded from MongoDB");
+      }
+    } catch (err) {
+      console.warn("Could not fetch candidate metadata from API, falling back to on-chain data only:", err.message);
+    }
+  },
+
+  eventStart: async function() { 
     window.ethereum.request({ method: 'eth_requestAccounts' });
     VotingContract.setProvider(window.ethereum)
     VotingContract.defaults({from: window.ethereum.selectedAddress,gas:6654755})
@@ -16,6 +34,10 @@ window.App = {
     // Load account data
     App.account = window.ethereum.selectedAddress;
     $("#accountAddress").html("Your Account: " + window.ethereum.selectedAddress);
+
+    // Pre-fetch MongoDB candidate metadata
+    await App.fetchCandidateMetadata();
+
     VotingContract.deployed().then(function(instance){
      instance.getCountCandidates().then(function(countCandidates){
 
@@ -53,7 +75,13 @@ window.App = {
               var name = data[1];
               var party = data[2];
               var voteCount = data[3];
-              var viewCandidates = `<tr><td> <input class="form-check-input" type="radio" name="candidate" value="${id}" id=${id}>` + name + "</td><td>" + party + "</td><td>" + voteCount + "</td></tr>"
+
+              // Merge MongoDB metadata if available
+              var meta = App.candidateMeta[id.toNumber ? id.toNumber() : id] || {};
+              var bio = meta.bio ? `<br/><small style="color:#aaa">${meta.bio}</small>` : "";
+              var img = meta.image_url ? `<img src="${meta.image_url}" width="40" style="border-radius:50%;margin-right:8px;vertical-align:middle">` : "";
+
+              var viewCandidates = `<tr><td> <input class="form-check-input" type="radio" name="candidate" value="${id}" id=${id}>` + img + name + bio + "</td><td>" + party + "</td><td>" + voteCount + "</td></tr>"
               $("#boxCandidate").append(viewCandidates)
             })
         }

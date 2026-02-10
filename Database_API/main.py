@@ -1,4 +1,4 @@
-  # Import required modules
+# Import required modules
 import dotenv
 import os
 import mysql.connector
@@ -7,11 +7,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.encoders import jsonable_encoder
 from mysql.connector import errorcode
 import jwt
+from pymongo import MongoClient
 
 # Loading the environment variables
 dotenv.load_dotenv()
 
-# Initialize the todoapi app
+# Also load root .env if exists
+root_env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '.env')
+if os.path.exists(root_env_path):
+    dotenv.load_dotenv(root_env_path)
+
+# Initialize the app
 app = FastAPI()
 
 # Define the allowed origins for CORS
@@ -30,12 +36,14 @@ app.add_middleware(
 )
 
 # Connect to the MySQL database
+cnx = None
+cursor = None
 try:
     cnx = mysql.connector.connect(
-        user=os.environ['MYSQL_USER'],
-        password=os.environ['MYSQL_PASSWORD'],
-        host=os.environ['MYSQL_HOST'],
-        database=os.environ['MYSQL_DB'],
+        user=os.environ.get('MYSQL_USER', 'root'),
+        password=os.environ.get('MYSQL_PASSWORD', ''),
+        host=os.environ.get('MYSQL_HOST', 'localhost'),
+        database=os.environ.get('MYSQL_DB', 'voter_db'),
     )
     cursor = cnx.cursor()
 except mysql.connector.Error as err:
@@ -45,6 +53,19 @@ except mysql.connector.Error as err:
         print("Database does not exist")
     else:
         print(err)
+
+# Connect to MongoDB
+mongo_uri = os.environ.get('MONGODB_URI', 'mongodb://localhost:27017')
+mongo_db_name = os.environ.get('MONGODB_DB', 'election_pro')
+try:
+    mongo_client = MongoClient(mongo_uri)
+    mongo_db = mongo_client[mongo_db_name]
+    candidates_collection = mongo_db['candidates']
+    print(f"Connected to MongoDB: {mongo_db_name}")
+except Exception as e:
+    print(f"MongoDB connection failed: {e}")
+    mongo_client = None
+    candidates_collection = None
 
 # Define the authentication middleware
 async def authenticate(request: Request):
@@ -90,4 +111,23 @@ async def get_role(voter_id, password):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Database error"
+        )
+
+# === NEW: Candidate metadata endpoint (MongoDB Speed Layer) ===
+@app.get("/candidates")
+async def get_candidates():
+    """Fetch candidate metadata from MongoDB for fast display."""
+    if candidates_collection is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="MongoDB is not connected"
+        )
+    try:
+        candidates = list(candidates_collection.find({}, {"_id": 0}))
+        return {"candidates": candidates}
+    except Exception as e:
+        print(f"Error fetching candidates: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to fetch candidates from database"
         )
