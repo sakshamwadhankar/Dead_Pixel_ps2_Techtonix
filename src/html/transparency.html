@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Live Audit Trail — Election Transparency</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 50%, #0d1117 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+
+        /* ---- Header ---- */
+        .header {
+            background: rgba(255, 255, 255, 0.04);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 20px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header h1 {
+            font-size: 22px;
+            font-weight: 600;
+            color: #4fc3f7;
+        }
+
+        .header h1 span {
+            color: #00e676;
+        }
+
+        .back-link {
+            color: #4fc3f7;
+            text-decoration: none;
+            font-size: 14px;
+            border: 1px solid rgba(79, 195, 247, 0.3);
+            padding: 6px 16px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .back-link:hover {
+            background: rgba(79, 195, 247, 0.1);
+            border-color: #4fc3f7;
+        }
+
+        /* ---- Live Badge ---- */
+        .live-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0, 230, 118, 0.1);
+            border: 1px solid rgba(0, 230, 118, 0.3);
+            padding: 8px 18px;
+            border-radius: 20px;
+            margin: 20px 30px 10px;
+            font-size: 13px;
+            color: #00e676;
+        }
+
+        .pulse-dot {
+            width: 10px;
+            height: 10px;
+            background: #00e676;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.4;
+                transform: scale(0.8);
+            }
+        }
+
+        /* ---- Status ---- */
+        #statusMsg {
+            padding: 0 30px;
+            margin-bottom: 15px;
+            font-size: 13px;
+            color: #aaa;
+        }
+
+        /* ---- Table ---- */
+        .table-container {
+            margin: 0 30px 30px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead th {
+            background: rgba(79, 195, 247, 0.08);
+            color: #4fc3f7;
+            padding: 14px 16px;
+            text-align: left;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+
+        tbody td {
+            padding: 12px 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.04);
+            font-size: 14px;
+        }
+
+        .hash-cell {
+            font-family: 'Consolas', 'Courier New', monospace;
+            color: #bb86fc;
+            font-size: 13px;
+        }
+
+        tbody tr:hover {
+            background: rgba(79, 195, 247, 0.05);
+        }
+
+        /* ---- New row animation ---- */
+        .new-row {
+            animation: rowPop 0.6s ease-out;
+            background: rgba(0, 230, 118, 0.08) !important;
+        }
+
+        @keyframes rowPop {
+            0% {
+                opacity: 0;
+                transform: translateY(-20px) scale(0.95);
+                background: rgba(0, 230, 118, 0.25);
+            }
+
+            60% {
+                transform: translateY(2px) scale(1.01);
+            }
+
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+                background: rgba(0, 230, 118, 0.08);
+            }
+        }
+
+        /* ---- Info bar ---- */
+        .info-bar {
+            margin: 0 30px 20px;
+            padding: 14px 20px;
+            background: rgba(187, 134, 252, 0.06);
+            border: 1px solid rgba(187, 134, 252, 0.15);
+            border-radius: 8px;
+            font-size: 13px;
+            color: #ccc;
+            line-height: 1.6;
+        }
+
+        .info-bar strong {
+            color: #bb86fc;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Header -->
+    <div class="header">
+        <h1>&#128270; Election Audit Trail — <span>LIVE</span></h1>
+        <a href="javascript:history.back()" class="back-link">&#8592; Back to Voting</a>
+    </div>
+
+    <!-- Live badge -->
+    <div class="live-badge">
+        <div class="pulse-dot"></div>
+        Real-Time Feed &middot; <span id="liveCounter">0</span> events tracked
+    </div>
+
+    <!-- Status -->
+    <p id="statusMsg">Connecting to Supabase...</p>
+
+    <!-- Info -->
+    <div class="info-bar">
+        <strong>&#128274; Privacy-first:</strong> This audit log contains only blockchain metadata (transaction hashes,
+        block numbers).
+        <strong>No voter identity or personal data</strong> is ever recorded here.
+    </div>
+
+    <!-- Audit Table -->
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Transaction Hash</th>
+                    <th>Event</th>
+                    <th>Block #</th>
+                    <th>Timestamp</th>
+                </tr>
+            </thead>
+            <tbody id="auditBody">
+                <!-- Rows inserted by JS -->
+            </tbody>
+        </table>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../js/transparency.js"></script>
+</body>
+
+</html>

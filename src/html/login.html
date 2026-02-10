@@ -7,13 +7,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Login Page</title>
   <link rel="stylesheet" type="text/css" href="../css/login.css">
-
 </head>
 
 <body>
   <h1 align="center" style="color: azure;">Decentralized Voting Using Ethereum Blockchain</h1>
   <div class="container mt-5">
     <h1>Login</h1>
+
+    <!-- Step 1: Credentials -->
     <form id="loginForm">
       <div class="form-group">
         <label for="voter-id"><h3>Voter ID</h3></label>
@@ -23,12 +24,32 @@
         <label for="password"><h3>Password</h3></label>
         <input type="password" class="form-control" id="password" name="password" placeholder="Password">
       </div>
-      <button type="submit" class="btn btn-primary"><b>Login</b></button>
+      <button type="submit" class="btn btn-primary" id="loginBtn"><b>Login</b></button>
     </form>
+
+    <!-- Step 2: OTP Verification (hidden until Step 1 succeeds) -->
+    <div id="otpSection" style="display:none; margin-top:20px;">
+      <h3 style="color:#4fc3f7;">&#128274; Firebase OTP Verification</h3>
+      <p style="color:#aaa;">A verification email has been sent. Enter the 6-digit OTP code below.</p>
+      <div class="form-group">
+        <input type="text" class="form-control" id="otpInput" placeholder="Enter OTP code" maxlength="6"
+          style="text-align:center; font-size:24px; letter-spacing:8px;">
+      </div>
+      <button type="button" class="btn btn-primary" id="verifyOtpBtn"><b>Verify OTP</b></button>
+    </div>
+
+    <!-- Status messages -->
+    <div id="loginMsg" style="margin-top:15px; color:#ff5252; text-align:center;"></div>
   </div>
+
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.0/umd/popper.min.js"></script>
-  <script src="../js/login.js" type="module"></script>
+
+  <!-- Firebase SDK (compat mode for Browserify compatibility) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+
+  <script src="../dist/login.bundle.js"></script>
 </body>
 
 </html>
